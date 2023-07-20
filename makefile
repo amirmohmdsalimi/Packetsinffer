@@ -1,16 +1,16 @@
 CC=g++
 CFLAGS=-I.
 DEPS = 
-OBJ = mysniffer.o 
+OBJ =sniffer.o 
 LIBS=-lpcap
 
 %.o: %.cpp $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-mysniffer: $(OBJ)
+sniffer: $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 .PHONY: clean
 
 clean:
-	rm -f *.o *~ core mysniffer
+	rm -f *.o *~ core sniffer
