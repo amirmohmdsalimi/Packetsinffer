@@ -1,4 +1,5 @@
 #include <pcap.h>
+#include <vector>
 #include <stdio.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
@@ -24,23 +25,53 @@ void packet_handler(u_char *user_data, const struct pcap_pkthdr *pkthdr, const u
 }
 
 int main() {
-    char *dev;
-    char error_buffer[PCAP_ERRBUF_SIZE];
-    pcap_t *handle;
 
-    dev = "ens33";
-    if (dev == NULL) {
-        printf("Device not found: %s\n", error_buffer);
+
+    pcap_if_t *alldevs;
+    pcap_if_t *d;
+    char *dev;
+    pcap_t *handle;
+    char error_buffer[PCAP_ERRBUF_SIZE];
+    int i = 1;int inum;
+    std::vector<pcap_if_t*> devs;
+
+
+
+    if (pcap_findalldevs(&alldevs, error_buffer) == -1) {
+        fprintf(stderr, "Error in pcap_findalldevs: %s\n", error_buffer);
         return 1;
     }
 
-    handle = pcap_open_live(dev, BUFSIZ, 1, 100, error_buffer);
+    for (d = alldevs; d; d = d->next) {
+        printf("%d-%s\n",i, d->name);
+        devs.push_back(d);
+        i = i+1;
+    }
+    printf("enter the network card number:");
+    scanf("%d", &inum);
+    if(inum < 1 || inum > i-1){
+        printf("wrong number.");
+        pcap_freealldevs(alldevs);
+        return 0;
+
+    }
+
+
+    // dev = "ens33";
+    // if (dev == NULL) {
+    //     printf("Device not found: %s\n", error_buffer);
+    //     return 1;
+    // }
+
+    handle = pcap_open_live(devs[inum-1]->name, BUFSIZ, 1, 100, error_buffer);
     if (handle == NULL) {
         printf("Error opening device: %s\n", error_buffer);
         return 2;
     }
 
     pcap_loop(handle, 0, packet_handler, NULL);
+    pcap_freealldevs(alldevs);
+
 
     return 0;
 }
