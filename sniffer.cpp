@@ -6,6 +6,9 @@
 #include <pthread.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
 #include <arpa/inet.h>
 
 pcap_t *handle;
@@ -14,19 +17,47 @@ pcap_t *handle;
 void packet_handler(u_char *user_data, const struct pcap_pkthdr *pkthdr, const u_char *packet) {
     struct ether_header *eth_header;
     eth_header = (struct ether_header *) packet;
+    
 
     if (ntohs(eth_header->ether_type) == ETHERTYPE_IP) {
         struct ip *ip_header;
         ip_header = (struct ip *)(packet + ETHER_HDR_LEN);
+        int ip_header_len = ip_header->ip_hl * 4;
+
         
 
-        if(ip_header->ip_p == 1 ){
+        if(ip_header->ip_p == IPPROTO_ICMP ){
             printf("icmp packet captured \n");
             printf("IP Src: %s\n", inet_ntoa(ip_header->ip_src));
             printf("IP Dst: %s\n", inet_ntoa(ip_header->ip_dst));
             printf("------------------------------------------------\n");
             
         }
+
+        if(ip_header->ip_p == IPPROTO_TCP){
+            struct tcphdr* tcp_header = (struct tcphdr*)(packet + ip_header_len);
+
+            printf("tcp packet captured \n");
+            printf("IP Src: %s\n", inet_ntoa(ip_header->ip_src));
+            printf("IP Dst: %s\n", inet_ntoa(ip_header->ip_dst));
+            printf("Source port: %d\n", ntohs(tcp_header->source));
+            printf("Destination port: %d\n", ntohs(tcp_header->dest));
+            printf("------------------------------------------------\n");
+            
+        }
+
+        if(ip_header->ip_p == IPPROTO_UDP ){
+            struct udphdr* udp_header = (struct udphdr*)(packet + ip_header_len);
+
+            printf("udp packet captured \n");
+            printf("IP Src: %s\n", inet_ntoa(ip_header->ip_src));
+            printf("IP Dst: %s\n", inet_ntoa(ip_header->ip_dst));
+            printf("Source port: %d\n", ntohs(udp_header->source));
+            printf("Destination port: %d\n", ntohs(udp_header->dest));
+            printf("------------------------------------------------\n");
+            
+        }
+
     }
 }
 
