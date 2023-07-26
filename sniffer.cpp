@@ -1,9 +1,15 @@
 #include <pcap.h>
 #include <vector>
 #include <stdio.h>
+#include <termios.h>
+#include <unistd.h>
+#include <pthread.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>
+
+pcap_t *handle;
+
 
 void packet_handler(u_char *user_data, const struct pcap_pkthdr *pkthdr, const u_char *packet) {
     struct ether_header *eth_header;
@@ -24,24 +30,47 @@ void packet_handler(u_char *user_data, const struct pcap_pkthdr *pkthdr, const u
     }
 }
 
+
+void *key_monitor(void *arg) {
+
+    struct termios old_termios, new_termios;
+
+    tcgetattr(STDIN_FILENO, &old_termios);
+
+    new_termios = old_termios;
+
+    new_termios.c_lflag &= ~(ICANON | ECHO);
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
+
+    while (1) {
+        int ch = getchar();
+
+        if (ch == 1) {
+            pcap_breakloop(handle);
+            break;
+        }
+    }
+    tcsetattr(STDIN_FILENO, TCSANOW, &old_termios);
+
+
+    return NULL;
+}
+
+
 int main() {
-
-
     pcap_if_t *alldevs;
     pcap_if_t *d;
     char *dev;
-    pcap_t *handle;
     char error_buffer[PCAP_ERRBUF_SIZE];
+    pthread_t thread;
     int i = 1;int inum;
     std::vector<pcap_if_t*> devs;
-
-
 
     if (pcap_findalldevs(&alldevs, error_buffer) == -1) {
         fprintf(stderr, "Error in pcap_findalldevs: %s\n", error_buffer);
         return 1;
     }
-
     for (d = alldevs; d; d = d->next) {
         printf("%d-%s\n",i, d->name);
         devs.push_back(d);
@@ -55,23 +84,21 @@ int main() {
         return 0;
 
     }
-
-
-    // dev = "ens33";
-    // if (dev == NULL) {
-    //     printf("Device not found: %s\n", error_buffer);
-    //     return 1;
-    // }
-
     handle = pcap_open_live(devs[inum-1]->name, BUFSIZ, 1, 100, error_buffer);
     if (handle == NULL) {
         printf("Error opening device: %s\n", error_buffer);
         return 2;
     }
-
+    
+    pthread_create(&thread, NULL, key_monitor, NULL);
     pcap_loop(handle, 0, packet_handler, NULL);
+    pthread_join(thread, NULL);
+
+    
+
     pcap_freealldevs(alldevs);
 
-
     return 0;
+
+
 }

@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-I.
+CFLAGS=-I. -std=c++11 -pthread
 DEPS = 
 OBJ =sniffer.o 
 LIBS=-lpcap
